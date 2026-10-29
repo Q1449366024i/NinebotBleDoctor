@@ -17,33 +17,45 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Find and extract source ZIP
+        shell: bash
         run: |
+          set -euo pipefail
           ZIP=$(find . -maxdepth 1 -type f -iname '*.zip' -print -quit)
-          if [ -z "$ZIP" ]; then echo 'No source ZIP found in repository root'; exit 1; fi
+          if [ -z "$ZIP" ]; then
+            echo 'ERROR: Source ZIP not found in repository root.'
+            exit 1
+          fi
           mkdir -p extracted
           unzip -q "$ZIP" -d extracted
-          PROJECT=$(find extracted -name settings.gradle -o -name settings.gradle.kts | head -n 1 | xargs -r dirname)
-          if [ -z "$PROJECT" ]; then echo 'Gradle project not found inside ZIP'; exit 1; fi
-回声"PROJECT_DIR=$PROJECT">>姓名
+          PROJECT=$(find extracted -type f \( -name settings.gradle -o -name settings.gradle.kts \) -print -quit | xargs -r dirname)
+          if [ -z "$PROJECT" ]; then
+            echo 'ERROR: Gradle project not found in ZIP.'
+            exit 1
+          fi
+          echo "PROJECT_DIR=$PROJECT" >> "$GITHUB_ENV"
+          echo "Found project: $PROJECT"
 
-      - 姓名: 设置Java
-uses: 操作/设置-Java@v4
-和……一起:
-分布: temurin
-java版: '17'
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
 
-      姓名 设置渐变: 设置渐变
-uses: gradle/操作/设置-gradle@v4
-和……一起:
-gradle-version: '8.9'
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
 
-      - 姓名: 构建调试安装包
-跑: Gradle-p"$PROJECT_DIR"assemblyDebug
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
 
-      - 姓名: 上传安装包
-如果: 成功()
-uses: 操作/上载工件@v4
-和……一起:
-姓名: NinebotBleDoctor-debug-apk
-路径: 已提取/**/生成/输出/apk/调试/*.apk
-if-no-file-found: 误差
+      - name: Build debug APK
+        run: gradle -p "$PROJECT_DIR" assembleDebug
+
+      - name: Upload APK artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: NinebotBleDoctor-debug-apk
+          path: extracted/**/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
