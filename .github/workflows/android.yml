@@ -1,0 +1,49 @@
+name: Build Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/android.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Find and extract source ZIP
+        run: |
+          ZIP=$(find . -maxdepth 1 -type f -iname '*.zip' -print -quit)
+          if [ -z "$ZIP" ]; then echo 'No source ZIP found in repository root'; exit 1; fi
+          mkdir -p extracted
+          unzip -q "$ZIP" -d extracted
+          PROJECT=$(find extracted -name settings.gradle -o -name settings.gradle.kts | head -n 1 | xargs -r dirname)
+          if [ -z "$PROJECT" ]; then echo 'Gradle project not found inside ZIP'; exit 1; fi
+回声"PROJECT_DIR=$PROJECT">>姓名
+
+      - 姓名: 设置Java
+uses: 操作/设置-Java@v4
+和……一起:
+分布: temurin
+java版: '17'
+
+      姓名 设置渐变: 设置渐变
+uses: gradle/操作/设置-gradle@v4
+和……一起:
+gradle-version: '8.9'
+
+      - 姓名: 构建调试安装包
+跑: Gradle-p"$PROJECT_DIR"assemblyDebug
+
+      - 姓名: 上传安装包
+如果: 成功()
+uses: 操作/上载工件@v4
+和……一起:
+姓名: NinebotBleDoctor-debug-apk
+路径: 已提取/**/生成/输出/apk/调试/*.apk
+if-no-file-found: 误差
